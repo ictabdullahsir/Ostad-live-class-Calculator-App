@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShopBD — bKash Checkout</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --pink:    #E2136E;
+      --pink-d:  #c00d5a;
+      --pink-l:  #fce8f2;
+      --dark:    #1a1a2e;
+      --mid:     #374151;
+      --muted:   #6b7280;
+      --border:  #e5e7eb;
+      --bg:      #f9fafb;
+      --white:   #ffffff;
+      --green:   #10b981;
+      --radius:  12px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--dark);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 100;
+      padding: 0 24px;
+    }
+    .header-inner {
+      max-width: 1200px; margin: 0 auto;
+      height: 64px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo {
+      font-size: 1.4rem; font-weight: 700; color: var(--pink);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .cart-btn {
+      position: relative; background: none; border: none;
+      font-size: 1.5rem; cursor: pointer; padding: 8px;
+    }
+    .cart-count {
+      position: absolute; top: 0; right: 0;
+      background: var(--pink); color: #fff;
+      font-size: 0.65rem; font-weight: 700;
+      width: 18px; height: 18px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .cart-count.hidden { display: none; }
+
+    /* ── Layout ── */
+    .page { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+    .shop-layout { display: grid; grid-template-columns: 1fr 380px; gap: 32px; align-items: start; }
+
+    /* ── Section headings ── */
+    .section-title {
+      font-size: 1.1rem; font-weight: 600; margin-bottom: 20px;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    /* ── Product grid ── */
+    .products-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px;
+    }
+    .product-card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px;
+      display: flex; flex-direction: column; gap: 12px;
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .product-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); transform: translateY(-2px); }
+    .product-emoji { font-size: 3rem; text-align: center; }
+    .product-name { font-weight: 600; font-size: 0.95rem; }
+    .product-category { font-size: 0.75rem; color: var(--muted); }
+    .product-price { font-size: 1.1rem; font-weight: 700; color: var(--pink); }
+    .add-btn {
+      background: var(--pink-l); color: var(--pink);
+      border: 1px solid var(--pink); border-radius: 8px;
+      padding: 8px; font-weight: 600; font-size: 0.85rem;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .add-btn:hover { background: var(--pink); color: #fff; }
+
+    /* ── Cart panel ── */
+    .cart-panel {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px;
+      position: sticky; top: 80px;
+    }
+    .cart-empty { text-align: center; color: var(--muted); padding: 32px 0; font-size: 0.9rem; }
+    .cart-items { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+    .cart-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px; background: var(--bg); border-radius: 8px;
+    }
+    .cart-item-emoji { font-size: 1.5rem; }
+    .cart-item-info { flex: 1; }
+    .cart-item-name { font-size: 0.85rem; font-weight: 600; }
+    .cart-item-price { font-size: 0.8rem; color: var(--muted); }
+    .qty-ctrl { display: flex; align-items: center; gap: 6px; }
+    .qty-btn {
+      width: 26px; height: 26px; border-radius: 50%;
+      border: 1px solid var(--border); background: var(--white);
+      font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .qty-btn:hover { background: var(--pink-l); border-color: var(--pink); }
+    .qty-num { font-size: 0.85rem; font-weight: 600; min-width: 20px; text-align: center; }
+
+    /* ── Cart summary ── */
+    .cart-divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+    .summary-row { display: flex; justify-content: space-between; font-size: 0.88rem; margin-bottom: 8px; }
+    .summary-row.total { font-weight: 700; font-size: 1.05rem; margin-top: 4px; }
+
+    /* ── Checkout form ── */
+    .checkout-form { margin-top: 20px; display: flex; flex-direction: column; gap: 12px; }
+    .form-group label { display: block; font-size: 0.8rem; font-weight: 500; margin-bottom: 4px; color: var(--mid); }
+    .form-group input {
+      width: 100%; padding: 10px 12px;
+      border: 1px solid var(--border); border-radius: 8px;
+      font-size: 0.9rem; font-family: inherit;
+      transition: border-color 0.15s;
+    }
+    .form-group input:focus { outline: none; border-color: var(--pink); }
+
+    /* ── bKash button ── */
+    .bkash-btn {
+      width: 100%; padding: 14px;
+      background: var(--pink); color: #fff;
+      border: none; border-radius: 10px;
+      font-size: 1rem; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: background 0.15s;
+      margin-top: 4px;
+    }
+    .bkash-btn:hover:not(:disabled) { background: var(--pink-d); }
+    .bkash-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .bkash-logo { font-size: 1.1rem; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      padding: 14px 20px; border-radius: 10px;
+      font-size: 0.9rem; font-weight: 500; color: #fff;
+      display: flex; align-items: center; gap: 10px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      transition: opacity 0.3s, transform 0.3s;
+      z-index: 999;
+    }
+    .toast.success { background: var(--green); }
+    .toast.error   { background: #ef4444; }
+    .toast.info    { background: var(--pink); }
+    .toast.hidden  { opacity: 0; transform: translateY(10px); pointer-events: none; }
+
+    /* ── Success modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 500; padding: 16px;
+    }
+    .modal-overlay.hidden { display: none; }
+    .modal {
+      background: var(--white); border-radius: 16px;
+      padding: 36px 32px; max-width: 420px; width: 100%; text-align: center;
+    }
+    .modal-icon { font-size: 3.5rem; margin-bottom: 16px; }
+    .modal-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 8px; }
+    .modal-msg { color: var(--muted); font-size: 0.9rem; margin-bottom: 20px; }
+    .modal-trx {
+      background: var(--bg); border-radius: 8px;
+      padding: 12px; font-size: 0.85rem; color: var(--mid);
+      margin-bottom: 20px; word-break: break-all;
+    }
+    .modal-trx span { font-weight: 600; color: var(--dark); }
+    .modal-close {
+      background: var(--pink); color: #fff;
+      border: none; border-radius: 8px;
+      padding: 12px 28px; font-size: 0.95rem; font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* ── Loading spinner ── */
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    .spinner.active { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .shop-layout { grid-template-columns: 1fr; }
+      .cart-panel { position: static; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="header-inner">
+    <div class="logo">🛍️ ShopBD</div>
+    <button class="cart-btn" onclick="scrollToCart()">
+      🛒
+      <span class="cart-count hidden" id="cartCount">0</span>
+    </button>
+  </div>
+</header>
+
+<!-- Main -->
+<div class="page">
+  <div class="shop-layout">
+
+    <!-- Products -->
+    <div>
+      <div class="section-title">🏪 Our Products</div>
+      <div class="products-grid" id="productsGrid">
+        <div style="color:var(--muted);font-size:.9rem;">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Cart -->
+    <div id="cartSection">
+      <div class="cart-panel">
+        <div class="section-title">🛒 Your Cart</div>
+
+        <div id="cartEmpty" class="cart-empty">
+          Your cart is empty.<br>Add some products!
+        </div>
+
+        <div id="cartItems" class="cart-items" style="display:none;"></div>
+
+        <div id="cartSummary" style="display:none;">
+          <hr class="cart-divider">
+          <div class="summary-row"><span>Subtotal</span><span id="subtotal">৳0</span></div>
+          <div class="summary-row"><span>Shipping</span><span>৳60</span></div>
+          <div class="summary-row total"><span>Total</span><span id="totalAmount">৳60</span></div>
+
+          <div class="checkout-form">
+            <div class="form-group">
+              <label>Your Name</label>
+              <input type="text" id="customerName" placeholder="Enter your name" />
+            </div>
+            <div class="form-group">
+              <label>bKash Number</label>
+              <input type="tel" id="customerPhone" placeholder="01XXXXXXXXX" maxlength="11" />
+            </div>
+            <button class="bkash-btn" id="payBtn" onclick="initiateBkashPayment()">
+              <span class="bkash-logo">💳</span>
+              <span id="payBtnText">Pay with bKash</span>
+              <div class="spinner" id="paySpinner"></div>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal-overlay hidden" id="successModal">
+  <div class="modal">
+    <div class="modal-icon">✅</div>
+    <div class="modal-title">Payment Successful!</div>
+    <div class="modal-msg">Your order has been confirmed. Thank you for shopping with ShopBD!</div>
+    <div class="modal-trx" id="trxDetails">
+      Transaction ID: <span id="trxID">—</span>
+    </div>
+    <button class="modal-close" onclick="closeModal()">Continue Shopping</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast hidden" id="toast"></div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────────
+  let products = [];
+  let cart = {};  // { productId: quantity }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  document.addEventListener("DOMContentLoaded", async () => {
+    await loadProducts();
+    checkUrlParams();
+  });
+
+  async function loadProducts() {
+    try {
+      const res = await fetch("/api/products");
+      products = await res.json();
+      renderProducts();
+    } catch {
+      showToast("Failed to load products", "error");
+    }
+  }
+
+  function checkUrlParams() {
+    const params = new URLSearchParams(window.location.search);
+    const payment = params.get("payment");
+    if (payment === "success") {
+      const trxID = params.get("trxID") || "N/A";
+      document.getElementById("trxID").textContent = trxID;
+      document.getElementById("successModal").classList.remove("hidden");
+      clearCart();
+      history.replaceState({}, "", "/");
+    } else if (payment === "cancelled") {
+      showToast("Payment was cancelled", "info");
+      history.replaceState({}, "", "/");
+    } else if (payment === "failed") {
+      showToast("Payment failed. Please try again.", "error");
+      history.replaceState({}, "", "/");
+    }
+  }
+
+  // ── Render Products ────────────────────────────────────────────────────────
+  function renderProducts() {
+    const grid = document.getElementById("productsGrid");
+    grid.innerHTML = products.map(p => `
+      <div class="product-card">
+        <div class="product-emoji">${p.image}</div>
+        <div>
+          <div class="product-name">${p.name}</div>
+          <div class="product-category">${p.category}</div>
+        </div>
+        <div class="product-price">৳${p.price.toLocaleString()}</div>
+        <button class="add-btn" onclick="addToCart(${p.id})">+ Add to Cart</button>
+      </div>
+    `).join("");
+  }
+
+  // ── Cart Logic ─────────────────────────────────────────────────────────────
+  function addToCart(id) {
+    cart[id] = (cart[id] || 0) + 1;
+    renderCart();
+    showToast("Added to cart!", "success");
+  }
+
+  function changeQty(id, delta) {
+    cart[id] = (cart[id] || 0) + delta;
+    if (cart[id] <= 0) delete cart[id];
+    renderCart();
+  }
+
+  function clearCart() {
+    cart = {};
+    renderCart();
+  }
+
+  function getCartItems() {
+    return Object.entries(cart).map(([id, qty]) => {
+      const p = products.find(x => x.id === Number(id));
+      return { ...p, qty };
+    });
+  }
+
+  function getSubtotal() {
+    return getCartItems().reduce((sum, i) => sum + i.price * i.qty, 0);
+  }
+
+  function renderCart() {
+    const items = getCartItems();
+    const count = items.reduce((s, i) => s + i.qty, 0);
+    const subtotal = getSubtotal();
+    const total = subtotal + 60;
+
+    // Badge
+    const badge = document.getElementById("cartCount");
+    badge.textContent = count;
+    badge.classList.toggle("hidden", count === 0);
+
+    // Empty state
+    document.getElementById("cartEmpty").style.display = count === 0 ? "block" : "none";
+    document.getElementById("cartItems").style.display = count === 0 ? "none" : "flex";
+    document.getElementById("cartSummary").style.display = count === 0 ? "none" : "block";
+
+    // Items
+    document.getElementById("cartItems").innerHTML = items.map(item => `
+      <div class="cart-item">
+        <div class="cart-item-emoji">${item.image}</div>
+        <div class="cart-item-info">
+          <div class="cart-item-name">${item.name}</div>
+          <div class="cart-item-price">৳${item.price.toLocaleString()} each</div>
+        </div>
+        <div class="qty-ctrl">
+          <button class="qty-btn" onclick="changeQty(${item.id}, -1)">−</button>
+          <span class="qty-num">${item.qty}</span>
+          <button class="qty-btn" onclick="changeQty(${item.id}, 1)">+</button>
+        </div>
+      </div>
+    `).join("");
+
+    document.getElementById("subtotal").textContent = `৳${subtotal.toLocaleString()}`;
+    document.getElementById("totalAmount").textContent = `৳${total.toLocaleString()}`;
+  }
+
+  // ── bKash Payment ──────────────────────────────────────────────────────────
+  async function initiateBkashPayment() {
+    const name = document.getElementById("customerName").value.trim();
+    const phone = document.getElementById("customerPhone").value.trim();
+    const items = getCartItems();
+
+    if (!items.length) return showToast("Your cart is empty", "error");
+    if (!name) return showToast("Please enter your name", "error");
+    if (!phone || !/^01[3-9]\d{8}$/.test(phone)) {
+      return showToast("Enter a valid Bangladeshi mobile number", "error");
+    }
+
+    const amount = getSubtotal() + 60;
+
+    // Loading state
+    const btn = document.getElementById("payBtn");
+    btn.disabled = true;
+    document.getElementById("payBtnText").textContent = "Redirecting to bKash...";
+    document.getElementById("paySpinner").classList.add("active");
+
+    try {
+      const res = await fetch("/api/bkash/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount,
+          cartItems: items.map(i => ({ id: i.id, name: i.name, qty: i.qty, price: i.price })),
+          customerName: name,
+          customerPhone: phone,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.bkashURL) {
+        showToast("Redirecting to bKash…", "info");
+        setTimeout(() => { window.location.href = data.bkashURL; }, 800);
+      } else {
+        throw new Error(data.error || "Payment creation failed");
+      }
+    } catch (err) {
+      showToast(err.message, "error");
+      btn.disabled = false;
+      document.getElementById("payBtnText").textContent = "Pay with bKash";
+      document.getElementById("paySpinner").classList.remove("active");
+    }
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function scrollToCart() {
+    document.getElementById("cartSection").scrollIntoView({ behavior: "smooth" });
+  }
+
+  function closeModal() {
+    document.getElementById("successModal").classList.add("hidden");
+  }
+
+  let toastTimer;
+  function showToast(msg, type = "info") {
+    const t = document.getElementById("toast");
+    const icons = { success: "✅", error: "❌", info: "ℹ️" };
+    t.innerHTML = `${icons[type] || ""} ${msg}`;
+    t.className = `toast ${type}`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.add("hidden"), 3500);
+  }
+</script>
+</body>
+</html>
